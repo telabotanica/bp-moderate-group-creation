@@ -49,15 +49,18 @@ register_deactivation_hook(__FILE__, 'bp_mgc_remove_groupmeta');
 
 
 /**
- * Unpublishes the given group
+ * Unpublishes the given group, unless the current user is WP admin
  */
-function bp_mgc_unpublish_group($group_id) {
-	//var_dump($group_id); exit;
-	bp_mgc_group_set_published_state($group_id, "0");
+function bp_mgc_unpublish_group_after_create($group_id) {
+	$published_state = "0";
+	if (is_super_admin()) {
+		$published_state = "1";
+	}
+	bp_mgc_group_set_published_state($group_id, $published_state);
 }
 // if not all steps are completed, the group exists anyway; using
 // "groups_created_group" instead of "groups_group_create_complete"
-add_action('groups_created_group', 'bp_mgc_unpublish_group');
+add_action('groups_created_group', 'bp_mgc_unpublish_group_after_create');
 
 
 /**
@@ -78,7 +81,18 @@ function bp_mgc_filter_unpublished_groups($array) {
 	$newarray['total'] = count($newarray['groups']);
 	return $newarray; 
 }; 
-add_filter('groups_get_groups', 'bp_mgc_filter_unpublished_groups', 10, 1); 
+add_filter('groups_get_groups', 'bp_mgc_filter_unpublished_groups', 10, 1);
+
+
+// define the bp_get_total_group_count callback 
+function bp_mgc_filter_unpublished_groups_from_total_group_count($groups_get_total_group_count) {
+	var_dump($groups_get_total_group_count); exit;
+	// make filter magic happen here... 
+	return $groups_get_total_group_count; 
+}; 
+
+// Doesn't change the count displayed in "WP admin" => "Groups" page...
+// add_filter('bp_get_total_group_count', 'bp_mgc_filter_unpublished_groups_from_total_group_count', 10, 1 ); 
 
 
 /**
@@ -96,7 +110,8 @@ function bp_mgc_filter_unpublished_group($group) {
 	}
 	return $group; 
 }; 
-add_filter( 'groups_get_group', 'bp_mgc_filter_unpublished_group', 10, 1 ); 
+// Breaks group creation ! Find another way !
+//add_filter( 'groups_get_group', 'bp_mgc_filter_unpublished_group', 10, 1 ); 
 
 
 /**

@@ -25,6 +25,8 @@ function bp_mgc_init() {
 	//require_once __DIR__ . '/admin-bp-settings.php';
 	// Admin management of moderated groups
 	require_once __DIR__ . '/admin-manage-moderated-groups.php';
+	// Prevent unpublished groups from being accessed
+	require_once __DIR__ . '/overload-home-template.php';
 }
 
 /**
@@ -118,36 +120,6 @@ function bp_mgc_filter_unpublished_groups($array) {
 add_filter('groups_get_groups', 'bp_mgc_filter_unpublished_groups', 10, 1);
 
 
-// define the bp_get_total_group_count callback 
-function bp_mgc_filter_unpublished_groups_from_total_group_count($groups_get_total_group_count) {
-	var_dump($groups_get_total_group_count); exit;
-	// make filter magic happen here... 
-	return $groups_get_total_group_count; 
-}; 
-
-// Doesn't change the count displayed in "WP admin" => "Groups" page...
-// add_filter('bp_get_total_group_count', 'bp_mgc_filter_unpublished_groups_from_total_group_count', 10, 1 ); 
-
-
-/**
- * Prevents groups having a groupmeta value "0" for key "published" from being
- * displayed
- * @TODO modify template instead of doing this, which might break everything !
- */
-/*function bp_mgc_filter_unpublished_group($group) { 
-	//echo "<pre>"; var_dump($group); echo "</pre>";
-	$published = groups_get_groupmeta($group->id, GROUPMETA_PUBLISHED_STATE);
-	//echo "Statut pour groupe [" . $group->id . "] (" . $group->name . ") : "; var_dump($published); echo "<br/>";
-	//exit;
-	if ($published === "0") {
-		$group = null;
-	}
-	return $group; 
-};*/ 
-// Breaks group creation ! Find another way !
-//add_filter( 'groups_get_group', 'bp_mgc_filter_unpublished_group', 10, 1 ); 
-
-
 /**
  * Sets the "published" state of the given group (published / unpublished)
  * 
@@ -183,8 +155,7 @@ add_filter('bp_notifications_get_registered_components', 'bp_mgc_custom_filter_n
  *  - to inform the super-admin that a group is awaiting moderation
  *  - to inform the group creator that his group was activated
  *  @TODO  - to inform the group creator that his group was deleted (rejected)
- *			by the super-admin => needs to hook group deletion process / is
- *			there a default notification for group deletion ?
+ *			by the super-admin => needs to hook group deletion process
  * 
  * Taken from :
  * https://webdevstudios.com/2015/10/06/buddypress-adding-custom-notifications/

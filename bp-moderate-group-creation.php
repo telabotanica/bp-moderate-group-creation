@@ -5,7 +5,7 @@
  * Plugin URI:        https://github.com/telabotanica/bp-moderate-group-creation
  * GitHub Plugin URI: https://github.com/telabotanica/bp-moderate-group-creation
  * Description:       A BuddyPress plugin that allows an admin to moderate groups creation 
- * Version:           0.1 dev
+ * Version:           0.1
  * Author:            Tela Botanica
  * Author URI:        https://github.com/telabotanica
  * License:           GPL-2.0+

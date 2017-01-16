@@ -36,11 +36,8 @@ function bp_mgc_moderate_groups() {
 	// Display the group deletion confirmation screen.
 	if ( 'delete' == $doaction && ! empty( $_GET['gid'] ) ) {
 		bp_groups_admin_delete();
-	// Activate the group(s) : set the published state to "1"
-	} elseif ( 'activate' == $doaction && ! empty( $_GET['gid'] ) ) {
-		bp_mgc_moderate_groups_validate();
-	// Otherwise, display the groups index screen.
 	} else {
+		// Otherwise, display the groups index screen.
 		bp_mgc_moderate_groups_index();
 	}
 }
@@ -66,6 +63,15 @@ function bp_mgc_moderate_groups_index() {
 
 		if ( $deleted > 0 ) {
 			$messages[] = sprintf( _n( '%s group has been permanently deleted.', '%s groups have been permanently deleted.', $deleted, 'buddypress' ), number_format_i18n( $deleted ) );
+		}
+	}
+
+	// If the user has activated a group, build status messages.
+	if ( ! empty( $_REQUEST['activated'] ) ) {
+		$activated  = ! empty($_REQUEST['activated']) ? (int) $_REQUEST['activated'] : 0;
+
+		if ($activated > 0) {
+			$messages[] = sprintf(_n( '%s group has been activated.', '%s groups have been activated.', $activated, 'buddypress'), number_format_i18n($activated));
 		}
 	}
 
@@ -111,46 +117,6 @@ function bp_mgc_moderate_groups_index() {
 <?php
 }
 
-/**
- * Validates all the groups (sets their published state to "1") given in
- * $_GET['gid']
- */
-function bp_mgc_moderate_groups_validate() {
-	if (! empty($_GET['gid'])) {
-		$group_ids = $_GET['gid'];
-		// homogeneization
-		if (!is_array($group_ids)) {
-			$group_ids = array($group_ids);
-		}
-		//var_dump($group_ids);
-
-		foreach($group_ids as $group_id) {
-			//echo "<br>Validation du groupe $group_id !";
-			bp_mgc_group_set_published_state($group_id, "1");
-			// send notification to group creator
-			$group = groups_get_group(array('group_id' => $group_id));
-			bp_notifications_add_notification(array(
-				'user_id'           => $group->creator_id,
-				'item_id'           => $group_id,
-				'component_name'    => 'bp-moderate-group-creation',
-				'component_action'  => 'bp_mgc_group_activated',
-				'date_notified'     => bp_core_current_time(),
-				'is_new'            => 1,
-			));
-		}
-		// display validation notification
-		?>
-		<div class="notice notice-success is-dismissible">
-			<p>
-				<?php echo __('Groups succesfully activated', 'bm-moderate-group-creation'); ?>
-			</p>
-		</div>
-		<?php
-		//exit;
-	}
-	// display list of remaining groups
-	bp_mgc_moderate_groups_index();
-}
 
 function bp_mgc_admin_notice_moderation_success() {
 }
@@ -174,6 +140,7 @@ function bp_mgc_moderate_groups_admin_load() {
 
 	$doaction   = bp_admin_list_table_current_bulk_action();
 	$min        = bp_core_get_minified_asset_suffix();
+	//var_dump($doaction); exit;
 
 	/**
 	 * Fires at top of groups admin page.
@@ -200,6 +167,38 @@ function bp_mgc_moderate_groups_admin_load() {
 
 		$redirect_to = add_query_arg( 'deleted', $count, $redirect_to );
 
+		bp_core_redirect( $redirect_to );
+
+	} elseif ('activate' == $doaction && ! empty($_GET['gid'])) {
+
+		$count = 0;
+		// Activate the group(s) : set the published state to "1"
+		if (! empty($_GET['gid'])) {
+			$group_ids = $_GET['gid'];
+			// homogeneization
+			if (!is_array($group_ids)) {
+				$group_ids = array($group_ids);
+			}
+			//var_dump($group_ids);
+
+			foreach($group_ids as $group_id) {
+				//echo "<br>Validation du groupe $group_id !";
+				bp_mgc_group_set_published_state($group_id, "1");
+				// send notification to group creator
+				$group = groups_get_group(array('group_id' => $group_id));
+				bp_notifications_add_notification(array(
+					'user_id'           => $group->creator_id,
+					'item_id'           => $group_id,
+					'component_name'    => 'bp-moderate-group-creation',
+					'component_action'  => 'bp_mgc_group_activated',
+					'date_notified'     => bp_core_current_time(),
+					'is_new'            => 1,
+				));
+				$count++;
+			}
+		}
+
+		$redirect_to = add_query_arg('activated', $count, $redirect_to);
 		bp_core_redirect( $redirect_to );
 
 	} elseif ( 'edit' == $doaction && ! empty( $_GET['gid'] ) ) {

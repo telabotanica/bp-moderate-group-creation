@@ -160,69 +160,55 @@ add_filter('bp_notifications_get_registered_components', 'bp_mgc_custom_filter_n
  * Taken from :
  * https://webdevstudios.com/2015/10/06/buddypress-adding-custom-notifications/
  */
-function custom_format_buddypress_notifications($action, $item_id, $secondary_item_id, $total_items, $format = 'string') {
+function custom_format_buddypress_notifications($action, $item_id, $secondary_item_id, $total_items, $format, $component_action_name, $component_name, $id) {
 	// New custom notification : a group is awaiting moderation
-	if ('bp_mgc_group_awaiting_moderation' === $action) {
+	if ('bp_mgc_group_awaiting_moderation' === $component_action_name) {
 		// $item_id is the group id
 		$group = groups_get_group(array('group_id' => $item_id));
 
-		$custom_title = __('A group is awaiting moderation', 'bp-moderate-group-creation')
-			. ' : '. bp_get_group_name($group);
-		$custom_link = bp_get_group_permalink($group);
-		$custom_text = '<a href="'. bp_core_get_user_domain($group->creator_id) . '">'
-			. bp_core_get_user_displayname($group->creator_id)
-			. '</a>  '
-			. __('created a new group', 'bp-moderate-group-creation') . ' : '
-			. '<a href="' . bp_get_group_permalink($group) . '">'
-			. bp_get_group_name($group)
-			. '</a>. '
-			. __('You may ', 'bp-moderate-group-creation')
-			// better way to get admin menu URL ? menu_page_url() doesn't work...
-			. '<a href="' . admin_url() . 'admin.php?page=bp-groups-moderation">'
-			. __('accept or reject it', 'bp-moderate-group-creation')
-			. '</a>';
+		$custom_link = admin_url() . 'admin.php?page=bp-groups-moderation';
+		$custom_text = ''
+			. __('New group', 'bp-moderate-group-creation') . ' ['
+			. bp_get_group_name($group) . '] '
+			. __('awaiting moderation', 'bp-moderate-group-creation') . ' ('
+			. __('created by', 'bp-moderate-group-creation') . ' '
+			. bp_core_get_user_displayname($group->creator_id) . ')'
 		;
-
 		// WordPress Toolbar
 		if ('string' === $format) {
-			$return = apply_filters('bp_mgc_custom_filter', $custom_text, esc_html($custom_text), $custom_link);
+			$return = '<a href="' . $custom_link . '">' . $custom_text . '</a>';
 		// Deprecated BuddyBar
 		} else {
-			$return = apply_filters('bp_mgc_custom_filter', array(
+			$return = array(
 				'text' => $custom_text,
 				'link' => $custom_link
-			), $custom_link, (int) $total_items, $custom_text, $custom_title);
+			);
 		}
-
 		return $return;
 	}
 	// New custom notification : a group was activated
-	if ('bp_mgc_group_activated' === $action) {
+	elseif ('bp_mgc_group_activated' === $component_action_name) {
 		// $item_id is the group id
 		$group = groups_get_group(array('group_id' => $item_id));
 
-		$custom_title = __('Group', 'buddypress') . ' '
-			. bp_get_group_name($group) . ' '
-			. __('validated', 'buddypress');
 		$custom_link  = bp_get_group_permalink($group);
-		$custom_text = __('Your group', 'bp-moderate-group-creation') . ' '
-			. '<a href="' . bp_get_group_permalink($group) . '">'
-			. bp_get_group_name($group) . '</a> '
+		$custom_text = __('Your group', 'bp-moderate-group-creation') . ' ['
+			. bp_get_group_name($group) . '] '
 			. __('was validated by an administrator', 'bp-moderate-group-creation')
 		;
-
 		// WordPress Toolbar
-		if ( 'string' === $format ) {
-			$return = apply_filters('bp_mgc_custom_filter', $custom_text, $custom_text, $custom_link );
+		if ('string' === $format) {
+			$return = '<a href="' . $custom_link . '">' . $custom_text . '</a>';
 		// Deprecated BuddyBar
 		} else {
-			$return = apply_filters('bp_mgc_custom_filter', array(
+			$return = array(
 				'text' => $custom_text,
 				'link' => $custom_link
-			), $custom_link, (int) $total_items, $custom_text, $custom_title);
+			);
 		}
-
 		return $return;
 	}
+	// allow execution of subsequent filters
+	return $action;
 }
-add_filter('bp_notifications_get_notifications_for_user', 'custom_format_buddypress_notifications', 10, 5);
+add_filter('bp_notifications_get_notifications_for_user', 'custom_format_buddypress_notifications', 10, 8);

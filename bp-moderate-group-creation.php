@@ -17,6 +17,8 @@
 // @TODO check that it doesn't conflict with any existing BP plugin
 const GROUPMETA_PUBLISHED_STATE = "published";
 
+// uninstall hook : remove notifications
+register_uninstall_hook(__FILE__, 'bp_mgc_clean_db');
 
 add_action('bp_include', 'bp_mgc_init');
 
@@ -27,6 +29,15 @@ function bp_mgc_init() {
 	require_once __DIR__ . '/admin-manage-moderated-groups.php';
 	// Prevent unpublished groups from being accessed
 	require_once __DIR__ . '/overload-home-template.php';
+}
+
+/**
+ * Removes the notifications
+ */
+function bp_mgc_clean_db() {
+	// delete notifications
+	global $wpdb;
+	$wpdb->query("DELETE FROM {$wpdb->prefix}bp_notifications WHERE component_name = 'bp-moderate-group-creation';");
 }
 
 /**

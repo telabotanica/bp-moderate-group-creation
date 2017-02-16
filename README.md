@@ -16,3 +16,7 @@ Once activated, every new group will remain in a unpublished state until a super
 This is an early stage plugin, our first one. Most of the mechanisms used are inspired by existing plugins but we can't guarantee evrything is done the way it should.
 
 Some minor issues are not yet resolved (see _issues_)
+
+## FAQ
+### some groups do not appear, neither in "groups list" nor in "groups awaiting moderation"
+Maybe you imported some groups into the database after the plugin was activated ? Deactivate and reactivate the plugin to generate appropriate metadata

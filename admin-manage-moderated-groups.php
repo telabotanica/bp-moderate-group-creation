@@ -1,4 +1,8 @@
 <?php
+/**
+ * Copied and modified from groups admin page - a lot of code might be useless
+ * @TODO review it properly
+ */
 
 // Exit if accessed directly.
 defined( 'ABSPATH' ) || exit;
@@ -21,7 +25,6 @@ function bp_mgc_admin_manage_moderated_groups() {
 	add_action( "load-$hook", 'bp_mgc_moderate_groups_admin_load' );
 }
 add_action('admin_menu', 'bp_mgc_admin_manage_moderated_groups');
-
 
 
 /**
@@ -117,10 +120,6 @@ function bp_mgc_moderate_groups_index() {
 <?php
 }
 
-
-function bp_mgc_admin_notice_moderation_success() {
-}
-
 /**
  * Set up the Moderate Groups admin page.
  *
@@ -140,7 +139,6 @@ function bp_mgc_moderate_groups_admin_load() {
 
 	$doaction   = bp_admin_list_table_current_bulk_action();
 	$min        = bp_core_get_minified_asset_suffix();
-	//var_dump($doaction); exit;
 
 	/**
 	 * Fires at top of groups admin page.
@@ -179,10 +177,8 @@ function bp_mgc_moderate_groups_admin_load() {
 			if (!is_array($group_ids)) {
 				$group_ids = array($group_ids);
 			}
-			//var_dump($group_ids);
 
 			foreach($group_ids as $group_id) {
-				//echo "<br>Validation du groupe $group_id !";
 				bp_mgc_group_set_published_state($group_id, "1");
 				// send notification to group creator
 				$group = groups_get_group(array('group_id' => $group_id));

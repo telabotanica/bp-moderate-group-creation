@@ -1,5 +1,9 @@
 <?php
 
+/**
+ * Naive extension of BP_Groups_List_Table; some code might be useless
+ * @TODO review it properly
+ */
 class BP_Moderated_Groups_List_Table extends BP_Groups_List_Table {
 
 	public function __construct() {
@@ -293,18 +297,6 @@ class BP_Moderated_Groups_List_Table extends BP_Groups_List_Table {
 	}
 
 	/**
-	 * Markup for the Last Active column.
-	 *
-	 * @since 1.7.0
-	 *
-	 * @param array $item Information about the current row.
-	 */
-	/*public function column_created_by( $item = array() ) {
-		$created_by = groups_get_groupmeta( $item['id'], 'last_activity' );
-		echo apply_filters_ref_array( 'bp_groups_admin_get_group_created_by', array( $created_by, $item ) );
-	}*/
-
-	/**
 	 * Markup for the Author column.
 	 *
 	 * @since 2.7.0
@@ -320,7 +312,6 @@ class BP_Moderated_Groups_List_Table extends BP_Groups_List_Table {
 
 		$author_id = $item['creator_id'];
 		$author = new WP_User($author_id);
-		//var_dump($creator_id);
 
 		echo sprintf(
 			'<strong><a href="%1$s" class="edit">%2$s</a></strong><br>(%3$s)<br/>',

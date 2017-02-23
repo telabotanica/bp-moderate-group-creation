@@ -103,6 +103,7 @@ add_action('groups_created_group', 'bp_mgc_unpublish_group_after_create');
 /**
  * Excludes groups having a groupmeta value "0" for key "published" from the
  * groups list / total count
+ * @WARNING might mess up with page size as results are filtered a posteriori
  */
 function bp_mgc_filter_unpublished_groups($array) {
 	// It's necessary to leave the groups array unfiltered when performing admin
@@ -124,7 +125,8 @@ function bp_mgc_filter_unpublished_groups($array) {
 				$newarray['groups'][] = $g;
 			}
 		}
-		$newarray['total'] = count($newarray['groups']);
+		// preserve total count or else it breaks pagination
+		$newarray['total'] = $array['total'];
 		return $newarray; 
 	}
 }; 

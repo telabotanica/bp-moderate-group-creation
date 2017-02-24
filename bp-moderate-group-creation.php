@@ -101,36 +101,47 @@ add_action('groups_created_group', 'bp_mgc_unpublish_group_after_create');
 
 
 /**
- * Excludes groups having a groupmeta value "0" for key "published" from the
- * groups list / total count
- * @WARNING might mess up with page size as results are filtered a posteriori
+ * Excludes unpublished groups from groups list
+ * 
+ * @WARNING what if another plugin tries to do the same kind of operation ? This
+ * seems like a serious limitation of WP filters mechanism
  */
-function bp_mgc_filter_unpublished_groups($array) {
+function bp_mgc_filter_unpublished_paged_groups_sql($paged_groups_sql, $sql, $r) {
+	global $wpdb;
 	// It's necessary to leave the groups array unfiltered when performing admin
 	// actions (?page) other than listing the groups (?action)
 	// @TODO not reliable ? - find a better way to achieve this !!
-	if (is_super_admin()
-		&& ! empty($_REQUEST['page'])
-		&& ! empty($_REQUEST['action'])
-	) {
-		return $array;
-	} else {
-		$newarray = array('groups' => array());
-		//echo "<pre>"; var_dump($array); echo "</pre>"; exit;
-		foreach ($array['groups'] as $k => &$g) {
-			$published = groups_get_groupmeta($g->id, GROUPMETA_PUBLISHED_STATE);
-			//echo "Statut pour groupe [" . $g->id . "] (" . $g->name . ") : "; var_dump($published); echo "<br/>";
-			if ($published === "1") {
-				//unset($array['groups'][$k]);
-				$newarray['groups'][] = $g;
-			}
-		}
-		// preserve total count or else it breaks pagination
-		$newarray['total'] = $array['total'];
-		return $newarray; 
+	if (is_super_admin() && ! empty($_REQUEST['page']) && ! empty($_REQUEST['action'])) {
+		return $paged_groups_sql;
 	}
-}; 
-add_filter('groups_get_groups', 'bp_mgc_filter_unpublished_groups', 10, 1);
+	// else add filtering clause
+	$sql['from'] .= " JOIN {$wpdb->prefix}bp_groups_groupmeta gm_published ON ( g.id = gm_published.group_id)";
+	$sql['where'] .= " AND gm_published.meta_key = 'published' AND gm_published.meta_value = 1";
+
+	$new_paged_groups_sql = "{$sql['select']} FROM {$sql['from']} WHERE {$sql['where']} {$sql['orderby']} {$sql['pagination']}";
+
+	return $new_paged_groups_sql;
+}
+add_filter('bp_groups_get_paged_groups_sql', 'bp_mgc_filter_unpublished_paged_groups_sql', 10, 3);
+
+
+/**
+ * Excludes unpublished groups from the total groups count
+ * 
+ * @WARNING what if another plugin tries to do the same kind of operation ? This
+ * seems like a serious limitation of WP filters mechanism
+ */
+function bp_mgc_filter_unpublished_total_groups_sql($total_groups_sql, $sql, $r) {
+	global $wpdb;
+
+	$sql['from'] .= " JOIN {$wpdb->prefix}bp_groups_groupmeta gm_published ON ( g.id = gm_published.group_id)";
+	$sql['where'] .= " AND gm_published.meta_key = 'published' AND gm_published.meta_value = 1";
+
+	$new_total_groups_sql = "SELECT count(DISTINCT g.id) FROM {$sql['from']} WHERE {$sql['where']} {$sql['orderby']}";
+
+	return $new_total_groups_sql;
+}
+add_filter('bp_groups_get_total_groups_sql', 'bp_mgc_filter_unpublished_total_groups_sql', 10, 3);
 
 
 /**

@@ -28,104 +28,79 @@ class BP_Moderated_Groups_List_Table extends BP_Groups_List_Table {
 	 * @since 1.7.0
 	 */
 	public function prepare_items() {
-		global $groups_template;
+		
+		$this->_column_headers = $this->get_column_info();
 
-		$screen = get_current_screen();
-
-		// Option defaults.
-		$include_id   = false;
-		$search_terms = false;
-
-		// Set current page.
-		$page = $this->get_pagenum();
-
-		// Set per page from the screen options.
-		$per_page = $this->get_items_per_page( str_replace( '-', '_', "{$screen->id}_per_page" ) );
-
-		// Sort order.
-		$order = 'DESC';
-		if ( !empty( $_REQUEST['order'] ) ) {
-			$order = ( 'desc' == strtolower( $_REQUEST['order'] ) ) ? 'DESC' : 'ASC';
+		// optional search term
+		$search = null;
+		if (! empty($_REQUEST['s'])) {
+			$search = $_REQUEST['s'];
 		}
 
-		// Order by - default to newest.
-		$orderby = 'last_activity';
-		if ( ! empty( $_REQUEST['orderby'] ) ) {
-			switch ( $_REQUEST['orderby'] ) {
-				case 'name' :
-					$orderby = 'name';
-					break;
-				case 'id' :
-					$orderby = 'date_created';
-					break;
-				case 'members' :
-					$orderby = 'total_member_count';
-					break;
-				case 'last_active' :
-					$orderby = 'last_activity';
-					break;
-			}
-		}
+		$per_page     = $this->get_items_per_page('messages_per_page', 20);
+		$current_page = $this->get_pagenum();
+		$total_items  = self::record_count($search);
 
-		// Are we doing a search?
-		if ( !empty( $_REQUEST['s'] ) )
-			$search_terms = $_REQUEST['s'];
+		$this->set_pagination_args(array(
+			'total_items' => $total_items,
+			'per_page'    => $per_page
+		));
 
-		// Check if user has clicked on a specific group (if so, fetch only that group).
-		if ( !empty( $_REQUEST['gid'] ) )
-			$include_id = (int) $_REQUEST['gid'];
+		$this->items = self::get_moderated_groups($per_page, $current_page, $search);
+	}
 
-		// Set the current view.
-		if ( isset( $_GET['group_status'] ) && in_array( $_GET['group_status'], array( 'public', 'private', 'hidden' ) ) ) {
-			$this->view = $_GET['group_status'];
-		}
+	public static function record_count($search=null) {
+		global $wpdb;
 
-		// We'll use the ids of group status types for the 'include' param.
-		$this->group_type_ids = BP_Groups_Group::get_group_type_ids();
+		$sql = "SELECT count(*)"
+			. " FROM {$wpdb->prefix}bp_groups g"
+			. " JOIN test_bp_groups_groupmeta gm_published ON ( g.id = gm_published.group_id)"
+			. " WHERE gm_published.meta_key = 'published'"
+			. " AND gm_published.meta_value = 0";
 
-		// Pass a dummy array if there are no groups of this type.
-		$include = false;
-		if ( 'all' != $this->view && isset( $this->group_type_ids[ $this->view ] ) ) {
-			$include = ! empty( $this->group_type_ids[ $this->view ] ) ? $this->group_type_ids[ $this->view ] : array( 0 );
-		}
-
-		// If we're viewing a specific group, flatten all activities into a single array.
-		if ( $include_id ) {
-			$groups = array( (array) groups_get_group( $include_id ) );
-		} else {
-			$groups_args = array(
-				'include'  => $include,
-				'per_page' => $per_page,
-				'page'     => $page,
-				'orderby'  => $orderby,
-				'order'    => $order,
-				'meta_query' => array(
-					array(
-						'key'     => GROUPMETA_PUBLISHED_STATE,
-						'value'   => "0", // unpublished groups only
-						'compare' => '='
-					)
-				)
+		// search
+		if ($search !== null) {
+			$search_like = esc_sql('%' . $search . '%');
+			$clauses = array(
+				"g.description LIKE '$search_like'",
+				"g.name LIKE '$search_like'"
 			);
-
-			$groups = array();
-			if ( bp_has_groups( $groups_args ) ) {
-				while ( bp_groups() ) {
-					bp_the_group();
-					$groups[] = (array) $groups_template->group;
-				}
-			}
+			$sql .= " AND (" . implode(' OR ', $clauses) . ")";
 		}
 
-		// Set raw data to display.
-		$this->items = $groups;
+		return $wpdb->get_var($sql);
+	}
 
-		// Store information needed for handling table pagination.
-		$this->set_pagination_args( array(
-			'per_page'    => $per_page,
-			'total_items' => $groups_template->total_group_count,
-			'total_pages' => ceil( $groups_template->total_group_count / $per_page )
-		) );
+	public static function get_moderated_groups($per_page = 20, $page_number = 1, $search=null) {
+		global $wpdb;
+
+		$sql = "SELECT g.*"
+			. " FROM {$wpdb->prefix}bp_groups g"
+			. " JOIN test_bp_groups_groupmeta gm_published ON ( g.id = gm_published.group_id)"
+			. " WHERE gm_published.meta_key = 'published'"
+			. " AND gm_published.meta_value = 0";
+
+		// search
+		if ($search !== null) {
+			$search_like = esc_sql('%' . $search . '%');
+			$clauses = array(
+				"g.description LIKE '$search_like'",
+				"g.name LIKE '$search_like'"
+			);
+			$sql .= " AND (" . implode(' OR ', $clauses) . ")";
+		}
+		// order
+		if (! empty($_REQUEST['orderby'])) {
+			$order_field = esc_sql($_REQUEST['orderby']);
+			$sql .= ' ORDER BY ' . $order_field;
+			$sql .= ! empty($_REQUEST['order']) ? ' ' . esc_sql($_REQUEST['order']) : ' ASC';
+		}
+		$sql .= " LIMIT $per_page";
+		$sql .= ' OFFSET ' . ($page_number - 1) * $per_page;
+
+		$result = $wpdb->get_results($sql, 'ARRAY_A');
+
+		return $result;
 	}
 
 	/**
@@ -176,44 +151,33 @@ class BP_Moderated_Groups_List_Table extends BP_Groups_List_Table {
 		 */
 		return apply_filters( 'bp_groups_list_table_get_columns', array(
 			'cb'          => '<input name type="checkbox" />',
-			'comment'     => _x( 'Name', 'Groups admin Group Name column header',               'buddypress' ),
+			'name'     => _x( 'Name', 'Groups admin Group Name column header',               'buddypress' ),
 			'description' => _x( 'Description', 'Groups admin Group Description column header', 'buddypress' ),
 			'created_by' => _x( 'Created By', 'Groups admin Created By column header', 'bp-moderate-group-creation' ),
 			'status'      => _x( 'Status', 'Groups admin Privacy Status column header',         'buddypress' ),
-			'last_active' => _x( 'Creation Date', 'Groups admin Creation Date column header',       'bp-moderate-group-creation' )
+			'date_created' => _x( 'Creation Date', 'Groups admin Creation Date column header',       'bp-moderate-group-creation' )
 		) );
 	}
 
 	/**
 	 * Get the column names for sortable columns.
-	 *
-	 * Note: It's not documented in WP, but the second item in the
-	 * nested arrays below is $desc_first. Normally, we would set
-	 * last_active to be desc_first (since you're generally interested in
-	 * the *most* recently active group, not the *least*). But because
-	 * the default sort for the Groups admin screen is DESC by last_active,
-	 * we want the first click on the Last Active column header to switch
-	 * the sort order - ie, to make it ASC. Thus last_active is set to
-	 * $desc_first = false.
-	 *
-	 * @since 1.7.0
-	 *
-	 * @return array Array of sortable column names.
 	 */
 	public function get_sortable_columns() {
 		return array(
 			'gid'         => array( 'gid', false ),
-			'comment'     => array( 'name', false ),
-			'created_by'  => array( 'created_by', false ),
-			'members'     => array( 'members', false ),
-			'last_active' => array( 'last_active', false ),
+			'name'     => array( 'name', false ),
+			'date_created' => array( 'date_created', false ),
 		);
+	}
+
+	public function column_date_created( $item = array() ) {
+		return $item['date_created'];
 	}
 
 	/**
 	 * Name column, and "quick admin" rollover actions.
 	 *
-	 * Called "comment" in the CSS so we can re-use some WP core CSS.
+	 * Called "name" in the CSS so we can re-use some WP core CSS.
 	 *
 	 * @since 1.7.0
 	 *
@@ -221,7 +185,7 @@ class BP_Moderated_Groups_List_Table extends BP_Groups_List_Table {
 	 *
 	 * @param array $item A singular item (one full row).
 	 */
-	public function column_comment( $item = array() ) {
+	public function column_name( $item = array() ) {
 
 		// Preorder items: Activate (| Edit) | Delete | View.
 		$actions = array(

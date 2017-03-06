@@ -22,4 +22,4 @@ Some minor issues are not yet resolved (see _issues_)
 Maybe you imported some groups into the database after the plugin was activated ? Deactivate and reactivate the plugin to generate appropriate metadata
 
 ## Licence
-MIT
+GPLv3
